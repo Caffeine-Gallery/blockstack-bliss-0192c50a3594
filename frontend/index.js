@@ -46,10 +46,13 @@ function getRandomPiece() {
         [[1, 1, 0], [0, 1, 1]],
         [[0, 1, 1], [1, 1, 0]]
     ];
-    return pieces[Math.floor(Math.random() * pieces.length)];
+    const randomPiece = pieces[Math.floor(Math.random() * pieces.length)];
+    randomPiece.colorIndex = Math.floor(Math.random() * COLORS.length);
+    return randomPiece;
 }
 
 function drawPiece(piece, offsetX, offsetY) {
+    if (!piece) return;
     piece.forEach((row, y) => {
         row.forEach((value, x) => {
             if (value) {
@@ -100,6 +103,7 @@ function update(time = 0) {
 }
 
 function collide(board, piece) {
+    if (!piece || !piece.matrix || !piece.pos) return true;
     for (let y = 0; y < piece.matrix.length; y++) {
         for (let x = 0; x < piece.matrix[y].length; x++) {
             if (piece.matrix[y][x] !== 0 &&
@@ -113,6 +117,7 @@ function collide(board, piece) {
 }
 
 function merge(board, piece) {
+    if (!piece || !piece.matrix || !piece.pos) return;
     piece.matrix.forEach((row, y) => {
         row.forEach((value, x) => {
             if (value !== 0) {
@@ -157,6 +162,7 @@ function updateScore() {
 }
 
 document.addEventListener('keydown', event => {
+    if (!piece || !piece.pos) return;
     if (event.keyCode === 37) {
         piece.pos.x--;
         if (collide(board, piece)) {
@@ -181,6 +187,7 @@ document.addEventListener('keydown', event => {
 });
 
 function rotatePiece() {
+    if (!piece || !piece.matrix) return;
     const rotated = piece.matrix[0].map((_, index) =>
         piece.matrix.map(row => row[index])
     ).reverse();
