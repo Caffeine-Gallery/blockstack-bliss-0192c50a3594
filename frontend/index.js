@@ -16,8 +16,8 @@ const COLORS = [
 
 let board = createBoard();
 let score = 0;
-let currentPiece = getRandomPiece();
-let nextPiece = getRandomPiece();
+let currentPiece = null;
+let nextPiece = null;
 
 function createBoard() {
     return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
@@ -48,12 +48,16 @@ function getRandomPiece() {
     ];
     const randomPiece = pieces[Math.floor(Math.random() * pieces.length)];
     randomPiece.colorIndex = Math.floor(Math.random() * COLORS.length);
-    return randomPiece;
+    return {
+        matrix: randomPiece,
+        pos: { x: Math.floor(COLS / 2) - Math.floor(randomPiece[0].length / 2), y: 0 },
+        colorIndex: randomPiece.colorIndex
+    };
 }
 
 function drawPiece(piece, offsetX, offsetY) {
-    if (!piece) return;
-    piece.forEach((row, y) => {
+    if (!piece || !piece.matrix) return;
+    piece.matrix.forEach((row, y) => {
         row.forEach((value, x) => {
             if (value) {
                 ctx.fillStyle = COLORS[piece.colorIndex];
@@ -66,8 +70,9 @@ function drawPiece(piece, offsetX, offsetY) {
 }
 
 function drawNextPiece() {
+    if (!nextPiece || !nextPiece.matrix) return;
     nextPieceCtx.clearRect(0, 0, nextPieceCanvas.width, nextPieceCanvas.height);
-    nextPiece.forEach((row, y) => {
+    nextPiece.matrix.forEach((row, y) => {
         row.forEach((value, x) => {
             if (value) {
                 nextPieceCtx.fillStyle = COLORS[nextPiece.colorIndex];
@@ -88,12 +93,14 @@ function update(time = 0) {
 
     dropCounter += deltaTime;
     if (dropCounter > 1000) {
-        piece.pos.y++;
-        if (collide(board, piece)) {
-            piece.pos.y--;
-            merge(board, piece);
-            pieceReset();
-            removeRows();
+        if (currentPiece) {
+            currentPiece.pos.y++;
+            if (collide(board, currentPiece)) {
+                currentPiece.pos.y--;
+                merge(board, currentPiece);
+                pieceReset();
+                removeRows();
+            }
         }
         dropCounter = 0;
     }
@@ -128,14 +135,14 @@ function merge(board, piece) {
 }
 
 function pieceReset() {
-    piece.matrix = nextPiece;
+    currentPiece = nextPiece || getRandomPiece();
     nextPiece = getRandomPiece();
-    piece.pos.y = 0;
-    piece.pos.x = Math.floor(COLS / 2) - Math.floor(piece.matrix[0].length / 2);
-    if (collide(board, piece)) {
+    if (collide(board, currentPiece)) {
         board.forEach(row => row.fill(0));
         score = 0;
         updateScore();
+        // Trigger game over event
+        window.dispatchEvent(new Event('gameOver'));
     }
 }
 
@@ -162,22 +169,22 @@ function updateScore() {
 }
 
 document.addEventListener('keydown', event => {
-    if (!piece || !piece.pos) return;
+    if (!currentPiece) return;
     if (event.keyCode === 37) {
-        piece.pos.x--;
-        if (collide(board, piece)) {
-            piece.pos.x++;
+        currentPiece.pos.x--;
+        if (collide(board, currentPiece)) {
+            currentPiece.pos.x++;
         }
     } else if (event.keyCode === 39) {
-        piece.pos.x++;
-        if (collide(board, piece)) {
-            piece.pos.x--;
+        currentPiece.pos.x++;
+        if (collide(board, currentPiece)) {
+            currentPiece.pos.x--;
         }
     } else if (event.keyCode === 40) {
-        piece.pos.y++;
-        if (collide(board, piece)) {
-            piece.pos.y--;
-            merge(board, piece);
+        currentPiece.pos.y++;
+        if (collide(board, currentPiece)) {
+            currentPiece.pos.y--;
+            merge(board, currentPiece);
             pieceReset();
             removeRows();
         }
@@ -187,19 +194,20 @@ document.addEventListener('keydown', event => {
 });
 
 function rotatePiece() {
-    if (!piece || !piece.matrix) return;
-    const rotated = piece.matrix[0].map((_, index) =>
-        piece.matrix.map(row => row[index])
+    if (!currentPiece || !currentPiece.matrix) return;
+    const rotated = currentPiece.matrix[0].map((_, index) =>
+        currentPiece.matrix.map(row => row[index])
     ).reverse();
-    const pos = piece.pos.x;
+    const pos = currentPiece.pos.x;
     let offset = 1;
-    piece.matrix = rotated;
-    while (collide(board, piece)) {
-        piece.pos.x += offset;
+    const originalMatrix = currentPiece.matrix;
+    currentPiece.matrix = rotated;
+    while (collide(board, currentPiece)) {
+        currentPiece.pos.x += offset;
         offset = -(offset + (offset > 0 ? 1 : -1));
-        if (offset > piece.matrix[0].length) {
-            rotate(piece.matrix, -1);
-            piece.pos.x = pos;
+        if (offset > currentPiece.matrix[0].length) {
+            currentPiece.matrix = originalMatrix;
+            currentPiece.pos.x = pos;
             return;
         }
     }
@@ -208,18 +216,22 @@ function rotatePiece() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBoard();
-    drawPiece(currentPiece, currentPiece.pos.x, currentPiece.pos.y);
+    if (currentPiece) {
+        drawPiece(currentPiece, currentPiece.pos.x, currentPiece.pos.y);
+    }
     drawNextPiece();
 }
 
-const piece = {
-    pos: { x: 5, y: 0 },
-    matrix: currentPiece
-};
+function startGame() {
+    board = createBoard();
+    score = 0;
+    currentPiece = getRandomPiece();
+    nextPiece = getRandomPiece();
+    updateScore();
+    update();
+}
 
-pieceReset();
-updateScore();
-update();
+startGame();
 
 // High score submission
 window.addEventListener('gameOver', async () => {
