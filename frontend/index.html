@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris Clone</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-area">
+            <canvas id="gameBoard" width="240" height="400"></canvas>
+            <div class="side-panel">
+                <div class="next-piece">
+                    <h3>Next Piece</h3>
+                    <canvas id="nextPiece" width="80" height="80"></canvas>
+                </div>
+                <div class="score">
+                    <h3>Score</h3>
+                    <p id="score">0</p>
+                </div>
+            </div>
+        </div>
+        <div class="controls">
+            <p>Use arrow keys to move, spacebar to rotate</p>
+        </div>
+    </div>
+    <script type="module" src="index.js"></script>
+</body>
+</html>
